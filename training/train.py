@@ -105,11 +105,14 @@ print(time.clock()-start)
 start = time.clock()
 centers = model.clusterCenters()
 print(time.clock()-start)
+model.save(sc, 'KmeansModel')
 
 # Next I create the Hamming Embedding Matrix
 
 import numpy as np
+from pyspark.ml.clustering import KMeansModel
 
+model = KMeansModel.load(sc, 'KmeansModel')
 d = 40
 db = 64
 G = np.random.randn(db, d)
