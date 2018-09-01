@@ -1,22 +1,47 @@
-# First I resize images to 250 X 250
+# Configuration Constants. Keep same as in train.py except for directories
 
-TEST_DIR = 'train'
-TEST_FET = 'train_fet'
+TEST_IMAGE_DIR = 'test'
+TEST_FET_DIR = 'test_fet'
 RESET = 100
+K = 10000
+d = 40
+db = 64
+
+# Imports
+
+from PIL import Image
+import os
+from delf import feature_io
+import numpy as np
+import pandas as pd
+import multiprocessing as mp
+from delfex import fetex
+import sys
+import findspark
+from pyspark import SparkContext, SparkConf
+from pyspark.sql import SparkSession
+import time
+from pyspark.ml.linalg import DenseVector
+from pyspark import StorageLevel
+from pyspark.ml.clustering import KMeans
+from pyspark.ml.clustering import KMeansModel
+from pyspark.sql import Row
+
+# First I resize images to 250 X 250
 
 from PIL import Image
 import os
 
-l = os.listdir(TEST_DIR)
+l = os.listdir(TEST_IMAGE_DIR)
 n = 0
 for file in l:
     try:
-        im = Image.open(TEST_DIR+'/'+file)
+        im = Image.open(TEST_IMAGE_DIR+'/'+file)
         im = im.resize((250, 250), Image.BICUBIC)
-        im.save(TEST_DIR+'/'+file)
+        im.save(TEST_IMAGE_DIR+'/'+file)
         del im
     except:
-        os.remove(TEST_DIR+'/'+file)
+        os.remove(TEST_IMAGE_DIR+'/'+file)
     if n%1000 == 0:
         print(n/len(l)*100)
     n += 1
@@ -30,17 +55,17 @@ import pandas as pd
 import multiprocessing as mp
 from delfex import fetex
 
-l = os.listdir(TEST_DIR)
+l = os.listdir(TEST_IMAGE_DIR)
 
 for i in range(0, len(l),RESET):
     with open('list_images.txt', 'w') as f:
-        [f.write(os.path.join(os.getcwd(), TEST_DIR, file)+'\n') for file in l[i:i+RESET]]
-    p = mp.Process(target=fetex, args=(TEST_FET,))
+        [f.write(os.path.join(os.getcwd(), TEST_IMAGE_DIR, file)+'\n') for file in l[i:i+RESET]]
+    p = mp.Process(target=fetex, args=(TEST_FET_DIR,))
     p.start()
     p.join()
     for file in l[i:i+RESET]:
-        _, _, desc, _, _ = feature_io.ReadFromFile(TEST_FET+'/'+file.split('.')[0]+'.delf')
-        np.save(TEST_FET+'/'+file.split('.')[0]+'.npy', desc)
+        _, _, desc, _, _ = feature_io.ReadFromFile(TEST_FET_DIR+'/'+file.split('.')[0]+'.delf')
+        np.save(TEST_FET_DIR+'/'+file.split('.')[0]+'.npy', desc)
 		
 # Next, loaded the features of all images into a spark rdd. This takes a long time
 
@@ -72,13 +97,13 @@ import pandas as pd
 import time
 n = 0
 k = 0
-l = os.listdir(TEST_FET)
+l = os.listdir(TEST_FET_DIR)
 start = time.clock()
 data = None
 pan = None
 for file in l:
     if file.endswith('.npy'):
-        desc = np.load(TEST_FET+'/'+file)
+        desc = np.load(TEST_FET_DIR+'/'+file)
         if pan is None:
             pan = pd.DataFrame({'index' : list(range(n,n+desc.shape[0])),
                                 'file': [file.split('.')[0]]*desc.shape[0], 
@@ -170,4 +195,4 @@ df.rdd.map(lambda x: (x[1], score(x[3], x[2]))) \
     .reduceByKey(lambda x,y: red(x, y)) \
     .map(lambda x: (x[0], ' '.join(list(x[1].index)[:100]))) \
     .toDF(['id', 'images']) \
-    .toPandas().to_csv('submit2.csv', index=False)
+    .toPandas().to_csv('submit2.csv', index=False)	
