@@ -1,7 +1,7 @@
 # Configuration Constants. Keep same as in train.py except for directories
 
-TEST_IMAGE_DIR = 'test'
-TEST_FET_DIR = 'test_fet'
+TEST_IMAGE_DIR = 'test'		# directory for test images
+TEST_FET_DIR = 'test_fet'	# directory for test image features
 RESET = 100
 K = 10000
 d = 40
